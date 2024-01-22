@@ -1,11 +1,17 @@
 #!/usr/bin/perl -w
 
+# 启用了 Perl 的 strict 模式，它强制执行一些编码标准，帮助捕获一些潜在的错误或者不良的编码习惯
 use strict;
 
+# POSIX 模块提供了与操作系统相关的函数，这里用于格式化日期和时间
 use POSIX qw(strftime);
+# Time::HiRes 模块提供了高分辨率的时间函数，允许对时间进行更精确的操作
 use Time::HiRes;
+# IO::Handle 模块提供了文件句柄的功能，用于进行文件输入输出
 use IO::Handle;
+# File::Path 模块提供了处理文件路径的功能
 use File::Path;
+# FindBin 模块用于查找脚本的目录
 use FindBin;
 
 
@@ -76,7 +82,7 @@ my $version = "5.1.3";
 # effect of different languages.
 my $language = "en_US.utf8";
 
-# The number of iterations per test.
+# 每个测试的迭代次数
 my $longIterCount = 10;
 my $shortIterCount = 3;
 
@@ -87,24 +93,25 @@ my $cCompiler = 'gcc';
 # (or do they, any more?).  They can be set in env.
 # variable names are the first parameter to getDir() below.
 
-# Directory where the test programs live.
+# 测试程序所在的目录
 my $BINDIR = getDir('UB_BINDIR', $FindBin::Bin . "/pgms");
 
-# Temp directory, for temp files.
+# 临时目录，用于存放临时文件
 my $TMPDIR = getDir('UB_TMPDIR', $FindBin::Bin . "/tmp");
 
-# Directory to put results in.
+# 存放结果的目录
 my $RESULTDIR = getDir('UB_RESULTDIR', $FindBin::Bin . "/results");
 
-# Directory where the tests are executed.
+# 执行测试的目录
 my $TESTDIR = getDir('UB_TESTDIR', $FindBin::Bin . "/testdir");
 
 
 ############################################################################
-# TEST SPECIFICATIONS
+# 测试规范
 ############################################################################
 
-# Configure the categories to which tests can belong.
+# 配置测试可以所属的类别
+# 定义了一个哈希引用（hash reference）变量 $testCats，用于存储一组相关的测试类别信息
 my $testCats = {
     'system'    => { 'name' => "System Benchmarks", 'maxCopies' => 0 },
     '2d'        => { 'name' => "2D Graphics Benchmarks", 'maxCopies' => 1 },
@@ -113,6 +120,7 @@ my $testCats = {
 };
 
 
+# 定义了五个数组引用，分别用于存储不同的测试类别
 my $arithmetic = [
     "arithoh", "short", "int", "long", "float", "double", "whetstone-double"
 ];
@@ -129,6 +137,7 @@ my $oldsystem = [
 ];
 
 my $system = [
+    # @$oldsystem：这里使用了数组解引用，将 $oldsystem 数组中的元素展开
     @$oldsystem, "shell1", "shell8", "shell16"
 ];
 
@@ -145,6 +154,7 @@ my $graphics = [
 # List of all supported test names.
 my $testList = {
     # Individual tests.
+    # 每一行都包含一个键值对，表示一个单独的测试。键是测试的名称，而值为 undef 表示这个测试还没有具体的信息
     "dhry2reg"      => undef,
     "whetstone-double"   => undef,
     "syscall"       => undef,
@@ -216,17 +226,24 @@ my $testList = {
 # Default parameters for benchmarks.  Note that if "prog" is used,
 # it must contain just the program name, as it will be quoted (this
 # is necessary if BINDIR contains spaces).  Put any options in "options".
+# 声明一个哈希引用变量 $baseParams，用于存储基准测试的默认参数
 my $baseParams = {
+    # 默认值为 undef，即没有特定的程序名称
     "prog" => undef,
+    # 指定了一个键为 "options" 的项，其值为空字符串。这是用于存储基准测试选项的地方
     "options" => "",
+    # 用于指定基准测试的重复次数，默认设置为 "short"
     "repeat" => 'short',
+    # 表示是否保留标准输出。非零值表示保留标准输出
     "stdout" => 1,                  # Non-0 to keep stdout.
+    # 用于存储基准测试的标准输入内容
     "stdin" => "",
+    # 用于存储基准测试的日志消息
     "logmsg" => "",
 };
 
 
-# Individual parameters for all benchmarks.
+# 定义了一个哈希引用变量 $testParams，其中包含了各种不同基准测试的详细参数
 my $testParams = {
 
     ##########################
@@ -495,6 +512,7 @@ my $testParams = {
 
 
 # CPU flags of interest.
+# 定义了一个哈希引用变量 $x86CpuFlags，用于存储 x86 架构中一些与 CPU 相关的标志信息
 my $x86CpuFlags = {
     'pae' => "Physical Address Ext",
     'sep' => "SYSENTER/SYSEXIT",
@@ -521,7 +539,10 @@ my $x86CpuFlags = {
 # We return an array containing the PID and the filehandle on the
 # process' standard output.  It's up to the caller to wait for the command
 # to terminate.
+# 定义了一个名为 command 的子例程，用于执行给定的命令并捕获其标准输出
 sub command {
+    # @_ 是一个特殊的数组，包含了传递给当前子例程的参数列表
+    # my ( $cmd ) 是一种 Perl 中的解构语法，它将数组 @_ 中的第一个元素（即传递给子例程的命令字符串）赋值给变量 $cmd
     my ( $cmd ) = @_;
 
     my $pid = open(my $childFd, "-|");
@@ -542,6 +563,7 @@ sub command {
 # Ignores initial blank lines from the command and returns the first
 # non-blank line, with white space trimmed off.  Returns a blank string
 # if there is no output; undef if the command fails.
+# 定义了一个名为 getCmdOutput 的子例程，用于运行系统命令并获取其输出
 sub getCmdOutput {
     my ( $cmd ) = @_;
 
@@ -567,6 +589,8 @@ sub getCmdOutput {
 
 # Get a directory pathname from an environment variable, or the given
 # default.  Canonicalise and return the value.
+# 定义了一个名为 getDir 的子例程，用于获取一个目录路径名，该路径名来自环境变量，如果环境变量未设置，
+# 则使用给定的默认值。然后，对路径进行规范化（Canonicalise）并返回其值
 sub getDir {
     my ( $var, $def ) = @_;
 
@@ -580,6 +604,7 @@ sub getDir {
 }
 
 # Create direcotry(0755) if not exists.
+# 用于检查给定的目录路径是否存在，如果不存在则创建目录
 sub createDirrectoriesIfNotExists {
     foreach my $path (@_) {
         my $isDirectoryNotExists = ! -d $path;
@@ -590,6 +615,7 @@ sub createDirrectoriesIfNotExists {
 }
 
 # Show use directories.
+# 用于在标准输出上打印一些使用目录的信息
 sub printUsingDirectories {
     printf "------------------------------------------------------------------------------\n";
     printf "   Use directories for:\n";
@@ -602,6 +628,7 @@ sub printUsingDirectories {
 
 # Get the name of the file we're going to log to.  The name uses the hostname
 # and date, plus a sequence number to make it unique.
+# 用于获取将要记录到的文件的名称。文件名基于主机名、日期以及一个序列号以确保唯一性
 sub logFile {
     my ( $sysInfo ) = @_;
 
@@ -629,6 +656,8 @@ sub logFile {
 # Print a message to the named log file.  We use this method rather than
 # keeping the FD open because we use shell redirection to send command
 # output to the same file.
+# 用于向指定的日志文件打印消息。与保持文件描述符打开不同，此方法使用文件追加模式，
+# 因为我们使用 shell 重定向将命令输出发送到同一文件
 sub printLog {
     my ( $logFile, @args ) = @_;
 
@@ -641,6 +670,7 @@ sub printLog {
 # Display a number of something, auto-selecting the plural form
 # if appropriate.  We are given the number, the singular, and the
 # plural; if the plural is omitted, it defaults to singular + "s".
+# 用于显示数量的信息，根据数量自动选择单数或复数形式
 sub number {
     my ( $n, $what, $plural ) = @_;
 
@@ -656,6 +686,7 @@ sub number {
 
 # Merge two sets of test parameters -- defaults and actual parameters.
 # Return the merged parameter hash.
+# 用于合并两个哈希引用，其中一个是默认参数，另一个是用户提供的参数
 sub mergeParams {
     my ( $def, $vals ) = @_;
 
@@ -672,11 +703,12 @@ sub mergeParams {
 
 
 ############################################################################
-# SYSTEM ANALYSIS
+# 系统分析
 ############################################################################
 
 # Extract interesting flags from the given processor flags string and
 # convert them to descriptive names.
+# 用于从给定的处理器标志字符串中提取感兴趣的标志，并将它们转换为描述性的名称
 sub processCpuFlags {
     my ( $flagStr ) = @_;
 
@@ -697,6 +729,7 @@ sub processCpuFlags {
 #
 # future: on systems without /proc/cpuinfo, might check for Perl modules:
 #   Sys::Info::Device::CPU or Sys::CpuAffinity
+# 用于获取系统中的CPU信息
 sub getCpuInfo {
     if (!("$^O" eq "darwin")) {
         open(my $fd, "<", "/proc/cpuinfo") || return undef;
@@ -750,6 +783,7 @@ sub getCpuInfo {
 # There is no shortage of platform-specific methods to obtain this info.
 # This routine -is not- exhaustive, but adds some additional portability.
 # Most modern unix systems implement sysconf(_SC_NPROCESSORS_ONLN).
+# 用于获取系统中的可用（活动）CPU数量或系统中的总CPU数量
 sub getNumActiveCpus {
     my $numCpus;
 
@@ -791,6 +825,7 @@ sub getNumActiveCpus {
 #    numCpus        Number of CPUs if known, else undef.
 #    load           System load message as per "uptime".
 #    numUsers       Number of users and/or open shell sessions.
+# 用于获取主机系统的信息
 sub getSystemInfo {
     my $info = { };
 
@@ -855,6 +890,7 @@ sub getSystemInfo {
 ############################################################################
 
 # Abort the benchmarking run with an error message.
+# 用于在发生错误时中止基准运行
 sub abortRun {
     my ( $err ) = @_;
 
@@ -869,6 +905,7 @@ sub abortRun {
 ############################################################################
 
 # Do checks that everything's ready for testing.
+# 用于执行在测试之前的一些准备检查
 sub preChecks {
     # Set the language.
     $ENV{'LANG'} = $language;
@@ -890,44 +927,57 @@ sub preChecks {
 
 
 # Parse the command arguments.
+# 用于解析命令行参数
 sub parseArgs {
     my @words = @_;
 
     # The accumulator for the bench units to be run.
+    # 用于存储要运行的基准测试单元的累加器
     my $tests = [ ];
     my $params = { 'tests' => $tests };
 
-    # Generate the requested list of bench programs.
+    # 生成请求的基准程序列表
     my $opt;
     my $word;
     while ($word = shift(@words)) {
+        # 如果单词不以"-"开头，则将其视为测试名称
         if ($word !~ m/^-/) {               # A test name.
+            # 如果单词是 "all"，则将所有测试添加到列表中
             if ($word eq "all") {
                 foreach my $t (keys(%$testList)) {
                     push(@$tests, $t) if (!defined($testList->{$t}));
                 }
+            # 如果单词在测试列表中，则添加相应的测试
             } elsif (exists($testList->{$word})) {
                 my $val = $testList->{$word} || [ $word ];
                 push(@$tests, @$val);
+            # 如果单词既不是 "all" 也不在测试列表中，则引发错误
             } else {
                 die("Run: unknown test \"$word\"\n");
             }
+        # 如果单词以"-"开头，则将其处理为选项
         } elsif ($word eq "-q") {
+            # 如果选项是 "-q"，将详细程度设置为 0（静默模式）
             $params->{'verbose'} = 0;
         } elsif ($word eq "-v") {
+            # 如果选项是 "-v"，将详细程度设置为 2（详细模式）
             $params->{'verbose'} = 2;
         } elsif ($word eq "-i") {
+            # 如果选项是 "-i"，将迭代次数设置为下一个单词
             $params->{'iterations'} = shift(@words);
         } elsif ($word eq "-c") {
+            # 如果选项是 "-c"，初始化 'copies' 数组并添加下一个单词
             if (!defined($params->{'copies'})) {
                 $params->{'copies'} = [ ];
             }
             push(@{$params->{'copies'}}, shift(@words));
+        # 如果单词以"-"开头，且无法识别为选项，则引发错误
         } else {
             die("Run: unknown option $word\n");
         }
     }
 
+    # 返回解析后的参数
     $params;
 }
 
@@ -939,6 +989,7 @@ sub parseArgs {
 # Read a set of benchmarking results from the given file.
 # Returns results in the form returned by runTests(), but without the
 # individual pass results.
+# 从文件中读取基准测试的结果，以哈希表的形式返回，其中键是基准测试的名称，而值是该基准测试的结果
 sub readResultsFromFile {
     my ( $file ) = @_;
 
@@ -982,6 +1033,7 @@ sub readResultsFromFile {
 # $bresult is a hashed array representing the results of a single test;
 # $bresult->{'passes'} is an array of the output from the individual
 # passes.
+# 用于处理单个测试的结果，通过将各个单独的测试通过结果平均为一个最终值
 sub combinePassResults {
     my ( $bench, $tdata, $bresult, $logFile ) = @_;
 
@@ -1057,6 +1109,7 @@ sub combinePassResults {
 #    result / baseline * 10
 # so an index of 523 indicates that a test ran 52.3 times faster than
 # the baseline.
+# 用于将给定的完整基准测试结果与基准线结果进行比较，并计算索引值。索引值表示测试相对于基准的性能提升倍数
 sub indexResults {
     my ( $results ) = @_;
 
@@ -1132,70 +1185,70 @@ sub indexResults {
 # In the parent process, we immediately return an array containing the
 # child PID and the filehandle to the pipe.  This allows the caller to
 # kick off multiple commands in parallel, then gather their output.
+# 在子进程中执行给定的命令，并通过管道传递命令的输出、执行时间和状态信息。这样可以实现并行执行多个命令
 sub commandBuffered {
     my ( $cmd ) = @_;
 
-    # Create a pipe for parent-child communication.
+    # 为父子通信创建管道。
     my $childReader;
     my $parentWriter;
     pipe($childReader, $parentWriter) || abortRun("pipe() failed");
     $parentWriter->autoflush(1);
 
-    # Fork off the child process.
+    # 分叉出子进程。
     my $pid = fork();
     if (!defined($pid)) {
         abortRun("fork() failed (undef)");
     } elsif ($pid == 0) {
-        # Close the other end of the pipe.
+        # 关闭管道的另一端。
         close $childReader;
 
-        # Start the clock and spawn the command.
+        # 启动时钟并生成命令。
         my $benchStart = Time::HiRes::time();
         my ( $cmdPid, $cmdFd ) = command($cmd);
 
-        # Read and buffer all the command's output.
+        # 读取并缓冲所有命令的输出。
         my $output = [ ];
         while (<$cmdFd>) {
             push(@$output, $_);
         }
 
-        # Stop the clock and save the time.
+        # 停止时钟并保存时间。
         my $elTime = Time::HiRes::time() - $benchStart;
         push(@$output, sprintf "elapsed|%f\n", $elTime);
 
-        # Wait for the child to die so we can get its status.
-        # close($cmdFd);  Doesn't work???
+        # 等待子进程死亡，以获取其状态。
+        # close($cmdFd);  为什么不起作用？？？
         waitpid($cmdPid, 0);
         my $status = $?;
         push(@$output, sprintf "status|%d\n", $status);
 
-        # Now that we've got the time, play back all the output to the pipe.
-        # The parent can read this at its leisure.
+        # 现在我们已经获得了时间，可以将所有输出回放到管道。
+        # 父进程可以在适当的时候读取这些内容。
         foreach my $line (@$output) {
             print $parentWriter $line;
         }
 
-        # Terminate this child.
+        # 终止此子进程。
         close $parentWriter;
         exit(0);
     }
 
-    # Close the other end of the pipe.
+    # 关闭管道的另一端。
     close $parentWriter;
 
     return ( $pid, $childReader );
 }
 
 
-# Read the results of a benchmark execution from a child process, given
-# its process ID and its filehandle.  Create a results hash structure
-# containing the fields returned by the child, plus:
-#    pid            The child's process ID
-#    status         The child's exit status
-#    ERROR          Any stderr output from the child that isn't result data
-# Note that ay result fields with ultiple values are split; so eg.
+# 从子进程中读取基准测试执行的结果，给定其进程ID和文件句柄。
+# 创建一个包含子进程返回的字段的结果哈希结构，还包括:
+#    pid            子进程的进程ID
+#    status         子进程的退出状态
+#    ERROR          子进程的stderr输出，不包含结果数据
+# 注意，任何具有多个值的结果字段都会被拆分; 所以例如
 #    COUNT|x|y|x
-# becomes
+# 变成
 #    COUNT0 = x
 #    COUNT1 = y
 #    COUNT2 = z
@@ -1236,18 +1289,16 @@ sub readResults {
 }
 
 
-# Execute a benchmark command.  We set off a given number of copies in
-# parallel to exercise multiple CPUs.
+# 执行一个基准测试命令。 我们一次并行设置给定数量的副本以使用多个CPU。
 #
-# We return an array of results hashes, one per copy; each one is as
-# returned by readResults().
+# 我们返回一个结果哈希的数组，每个哈希对应一个副本; 每个副本的格式与 readResults() 返回的格式相同。
 sub executeBenchmark {
     my ( $command, $copies ) = @_;
 
-    # Array of contexts for all the copies we're running.
+    # 保存所有运行副本的上下文数组。
     my $ctxt = [ ];
 
-    # Kick off all the commands at once.
+    # 同时启动所有命令。
     for (my $i = 0; $i < $copies; ++$i) {
         my ( $cmdPid, $cmdFd ) = commandBuffered($command);
         $ctxt->[$i] = {
@@ -1256,9 +1307,8 @@ sub executeBenchmark {
         };
     }
 
-    # Now, we can simply read back the command results in order.  Because
-    # the child processes read and buffer the results and time the commands,
-    # there's no need to use select() to read the results as they appear.
+    # 现在，我们可以按顺序读取命令的结果。因为子进程读取和缓冲结果，并计时命令，
+    # 所以无需使用 select() 以获取结果的即时性。
     my $pres = [ ];
     for (my $i = 0; $i < $copies; ++$i) {
         my $presult = readResults($ctxt->[$i]{'pid'}, $ctxt->[$i]{'fd'});
@@ -1269,13 +1319,11 @@ sub executeBenchmark {
 }
 
 
-# Run one iteration of a benchmark, as specified by the given
-# benchmark parameters.  We run multiple parallel copies as
-# specified by $copies.
+# 运行一个基准测试的一个迭代，根据给定的基准测试参数。我们并行运行多个副本，数量由 $copies 指定
 sub runOnePass {
     my ( $params, $verbose, $logFile, $copies ) = @_;
 
-    # Get the command to run.
+    # 获取要运行的命令。
     my $command = $params->{'command'};
     if ($verbose > 1) {
         printf "\n";
@@ -1283,41 +1331,41 @@ sub runOnePass {
         printf "COPIES: \"%d\"\n", $copies;
     }
 
-    # Remember where we are, and move to the test directory.
+    # 记住当前位置，并切换到测试目录。
     my $pwd = `pwd`;
     chdir($TESTDIR);
 
-    # Execute N copies of the benchmark in parallel.
+    # 并行执行 N 个副本的基准测试。
     my $copyResults = executeBenchmark($command, $copies);
     printLog($logFile, "\n");
 
-    # Move back home.
+    # 切回原来的目录。
     chdir($pwd);
 
-    # Sum up the scores of the copies.
+    # 统计所有副本的分数。
     my $count = 0;
     my $time = 0;
     my $elap = 0;
     foreach my $res (@$copyResults) {
-        # Log the result data for each copy.
+        # 记录每个副本的结果数据。
         foreach my $k (sort(keys(%$res))) {
             printLog($logFile, "# %s: %s\n", $k, $res->{$k});
         }
         printLog($logFile, "\n");
 
-        # If it failed, bomb out.
+        # 如果基准测试失败，则退出。
         if (defined($res->{'ERROR'})) {
             my $name = $params->{'logmsg'};
             abortRun("\"$name\": " . $res->{'ERROR'});
         }
 
-        # Count up the score.
+        # 统计分数。
         $count += $res->{'COUNT0'};
         $time += $res->{'TIME'} || $res->{'elapsed'};
         $elap += $res->{'elapsed'};
     }
 
-    # Make up a combined result.
+    # 构建一个合并的结果。
     my $passResult = $copyResults->[0];
     $passResult->{'COUNT0'} = $count;
     $passResult->{'TIME'} = $time / $copies;
@@ -1327,13 +1375,14 @@ sub runOnePass {
 }
 
 
+# 运行基准测试
 sub runBenchmark {
     my ( $bench, $tparams, $verbose, $logFile, $copies ) = @_;
 
-    # Make up the actual benchmark parameters.
+    # 将实际的基准测试参数合并
     my $params = mergeParams($baseParams, $tparams);
 
-    # Make up the command string based on the parameters.
+    # 基于参数构建命令字符串
     my $prog = $params->{'prog'} || $BINDIR . "/" . $bench;
     my $command = sprintf "\"%s\" %s", $prog, $params->{'options'};
     $command .= " < \"" . $params->{'stdin'} . "\"" if ($params->{'stdin'});
@@ -1341,20 +1390,21 @@ sub runBenchmark {
     $command .= $params->{'stdout'} ? (" >> \"" . $logFile . "\"") : " > /dev/null";
     $params->{'command'} = $command;
 
-    # Set up the benchmark results structure.
+    # 设置基准测试结果结构
     my $bresult = { 'name' => $bench, 'msg' => $params->{'logmsg'} };
 
     if ($verbose > 0) {
         printf "\n%d x %s ", $copies, $params->{'logmsg'};
     }
 
+    # 将基准测试信息记录到日志文件中
     printLog($logFile,
              "\n########################################################\n");
     printLog($logFile, "%s -- %s\n",
              $params->{'logmsg'}, number($copies, "copy", "copies"));
     printLog($logFile, "==> %s\n\n", $command);
 
-    # Run the test iterations, as given by the "repeat" parameter.
+    # 运行基准测试的迭代，由 "repeat" 参数给出
     my $repeats = $shortIterCount;
     $repeats = $longIterCount if $params->{'repeat'} eq 'long';
     $repeats = 1 if $params->{'repeat'} eq 'single';
@@ -1362,23 +1412,23 @@ sub runBenchmark {
     for (my $i = 1; $i <= $repeats; ++$i) {
         printLog($logFile, "#### Pass %d\n\n", $i);
 
-        # make an attempt to flush buffers
+        # 尝试刷新缓冲区
         system("sync; sleep 1; sync; sleep 2");
-        # display heartbeat
+        # 显示心跳
         if ($verbose > 0) {
             printf " %d", $i;
         }
 
-        # Execute one pass of the benchmark.
+        # 执行基准测试的一次迭代
         my $presult = runOnePass($params, $verbose, $logFile, $copies);
         push(@$pres, $presult);
     }
     $bresult->{'passes'} = $pres;
 
-    # Calculate the averaged results for this benchmark.
+    # 计算该基准测试的平均结果
     combinePassResults($bench, $tparams, $bresult, $logFile);
 
-    # Log the results.
+    # 记录结果
     if ($copies == 1) {
         printLog($logFile, "\n>>>> Results of 1 copy\n");
     } else {
@@ -1389,7 +1439,7 @@ sub runBenchmark {
     }
     printLog($logFile, "\n");
 
-    # Some specific cleanup routines.
+    # 一些特定的清理例程
     if ($bench eq "C") {
         unlink(${TESTDIR} . "/cctest.o");
         unlink(${TESTDIR} . "/a.out");
@@ -1399,46 +1449,59 @@ sub runBenchmark {
         printf "\n";
     }
 
+    # 返回基准测试结果
     $bresult;
 }
 
 
-# Run the named benchmarks.
+
+# 运行指定的基准测试
 sub runTests {
     my ( $tests, $verbose, $logFile, $copies ) = @_;
 
-    # Run all the requested tests and gather the results.
+    # 存储测试结果的哈希表，以及测试开始时间和运行的副本数
     my $results = { 'start' => time(), 'copies' => $copies };
+
+    # 遍历所有请求的基准测试
     foreach my $bench (@$tests) {
-        # Get the parameters for this benchmark.
+        # 获取此基准测试的参数
         my $params = $testParams->{$bench};
+        
+        # 如果参数未定义，终止运行并显示错误信息
         if (!defined($params)) {
             abortRun("unknown benchmark \"$bench\"");
         }
 
-        # If the benchmark doesn't want to run with this many copies, skip it.
+        # 如果此基准测试不希望以这么多副本运行，跳过它
         my $cat = $params->{'cat'};
         my $maxCopies = $testCats->{$cat}{'maxCopies'};
         next if ($maxCopies > 0 && $copies > $maxCopies);
 
-        # Run the benchmark.
+        # 运行基准测试
         my $bresult = runBenchmark($bench, $params, $verbose, $logFile, $copies);
+        
+        # 将基准测试结果存储在结果哈希表中
         $results->{$bench} = $bresult;
     }
+
+    # 记录测试结束时间
     $results->{'end'} = time();
 
-    # Generate a sorted list of benchmarks for which we have results.
+    # 生成按基准测试名称排序的列表，其中包含结果
     my @benches = grep {
         ref($results->{$_}) eq "HASH" && defined($results->{$_}{'msg'})
     } keys(%$results);
     @benches = sort {
         $results->{$a}{'msg'} cmp $results->{$b}{'msg'}
     } @benches;
+
+    # 将排序后的基准测试列表存储在结果哈希表中
     $results->{'list'} = \@benches;
 
-    # Generate index scores for the results relative to the baseline data.
+    # 生成相对于基准数据的索引分数
     indexResults($results);
 
+    # 返回所有基准测试的结果
     $results;
 }
 
@@ -1447,8 +1510,7 @@ sub runTests {
 # TEXT REPORTS
 ############################################################################
 
-# Display a banner indicating the configuration of the system under test
-# to the given file desc.
+# 显示指示被测系统配置的横幅到给定的文件描述符
 sub displaySystem {
     my ( $info, $fd ) = @_;
 
@@ -1480,7 +1542,7 @@ sub displaySystem {
 }
 
 
-# Display the test scores from the given set of test results.
+# 从给定的测试结果集中显示测试分数。
 sub logResults {
     my ( $results, $outFd ) = @_;
 
@@ -1500,7 +1562,7 @@ sub logResults {
 }
 
 
-# Display index scores, if any, for the given run results.
+# 显示给定运行结果的索引分数（如果有）
 sub logIndexCat {
     my ( $results, $cat, $outFd ) = @_;
 
@@ -1588,6 +1650,7 @@ sub summarizeRun {
 # Write CSV Headers.
 #   e.g.: "Concurrency,Dhrystone 2 using register variables,Double-Precision Whetstone"
 #       
+# 用于写入CSV文件的标题行。它在第一列写入"Concurrency"，然后在后续列中写入每个测试的名称。CSV文件的标题行以逗号分隔，表示每一列的名称
 sub summarizeRunCsvHeader {
     my ( $results, $reportFd ) = @_;
 
@@ -1602,8 +1665,8 @@ sub summarizeRunCsvHeader {
     printf $reportFd "\n";
 }
 
-# Write CSV data rows per concurrency as "./Run -c 1 -c 2".
-#   e.g.: 1,33526940.9,3623.9
+# 按并发度写入CSV数据行，例如 "./Run -c 1 -c 2"。
+#   例如: 1,33526940.9,3623.9
 #         2,30386997.8,3678.8
 #         4,31439797.3,3781.4
 #         8,32872262.9,3826.2
@@ -1631,7 +1694,7 @@ sub summarizeRunCsvRows {
 # HTML REPORTS
 ############################################################################
 
-# Dump the given run results into the given report file.
+# 此子例程用于生成 HTML 报告的头部
 sub runHeaderHtml {
     my ( $systemInfo, $reportFd ) = @_;
 
@@ -1745,6 +1808,7 @@ sub displaySystemHtml {
 
 # Display the test scores from the given set of test results
 # for a given category of tests.
+# 此子例程用于在 HTML 报告中显示测试系统的基本信息
 sub logCatResultsHtml {
     my ( $results, $cat, $fd ) = @_;
 
@@ -1823,6 +1887,7 @@ sub logCatResultsHtml {
 
 
 # Display index scores, if any, for the given run results.
+# 在 HTML 报告中显示测试结果的指数分数
 sub logResultsHtml {
     my ( $results, $fd ) = @_;
 
@@ -1833,6 +1898,7 @@ sub logResultsHtml {
 
 
 # Dump the given run results into the given report file.
+# 在 HTML 报告中总结测试运行的结果
 sub summarizeRunHtml {
     my ( $systemInfo, $results, $verbose, $reportFd ) = @_;
 
@@ -1852,7 +1918,7 @@ sub summarizeRunHtml {
     logResultsHtml($results, $reportFd);
 }
 
-
+# 在 HTML 报告的结尾部分添加一些附加信息，通常是一些法律声明或免责声明
 sub runFooterHtml {
     my ( $reportFd ) = @_;
 
@@ -1879,32 +1945,39 @@ EOF
 # MAIN
 ############################################################################
 
+# 定义主程序
 sub main {
+    # 获取命令行参数
     my @args = @_;
+    my $params = parseArgs(@args); # 解析命令行参数，得到参数哈希表
 
-    my $params = parseArgs(@args);
+    # 设置默认详细程度（verbosity）为 1
     my $verbose = $params->{'verbose'} || 1;
+
+    # 如果设置了迭代次数参数，根据迭代次数设置长短两种迭代次数
     if ($params->{'iterations'}) {
         $longIterCount = $params->{'iterations'};
         $shortIterCount = int(($params->{'iterations'} + 1) / 3);
         $shortIterCount = 1 if ($shortIterCount < 1);
     }
 
-    # If no benchmark units have be specified, do "index".
+    # 如果未指定具体的基准测试，将默认运行 "index"
     my $tests = $params->{'tests'};
     if ($#$tests < 0) {
         $tests = $index;
     }
 
-    # Create directories.    
+    # 创建必要的目录
     my @creatingDirectories = ( ${TMPDIR}, ${RESULTDIR} );
     createDirrectoriesIfNotExists(@creatingDirectories);
 
+    # 运行前检查
     preChecks();
+
+    # 获取系统信息
     my $systemInfo = getSystemInfo();
 
-    # If the number of copies to run was not set, set it to 1
-    # and the number of CPUs in the system (if > 1).
+    # 如果未指定副本数，将默认设置为 1 和系统中的 CPU 数量
     my $copies = $params->{'copies'};
     if (!$copies || scalar(@$copies) == 0) {
         push(@$copies, 1);
@@ -1913,61 +1986,69 @@ sub main {
         }
     }
 
-    # Display the program banner.
+    # 显示程序横幅
     system("cat \"${BINDIR}/unixbench.logo\"");
 
-    # Show output output directories, if not in quiet mode.
+    # 如果不是静默模式，显示输出目录信息
     if ($verbose > 0) {
         printUsingDirectories();
     }
 
+    # 如果详细程度（verbosity）大于 1，显示要运行的测试
     if ($verbose > 1) {
         printf "\n", join(", ", @$tests);
         printf "Tests to run: %s\n", join(", ", @$tests);
     }
 
-    # Generate unique file names for the report and log file.
+    # 生成唯一的报告文件名和日志文件名
     my $reportFile = logFile($systemInfo);
     my $reportHtml = $reportFile . ".html";
     my $reportCsv = $reportFile . ".csv";
     my $logFile = $reportFile . ".log";
 
-    # If defined "UB_OUTPUT_CSV" on Environment, output csv file.
+    # 如果定义了 "UB_OUTPUT_CSV" 环境变量并且设置为 "true"，则输出 CSV 文件
     my $ubOutputCsv = $ENV{"UB_OUTPUT_CSV"};
     my $isOutputFormatCsv = defined($ubOutputCsv) && $ubOutputCsv eq "true";
-    # If write CSV, header needs only once.
-    my $is_csv_header_written = 0;
-    
-    # Open the log file for writing.
-    open(my $reportFd, ">", $reportFile) ||
-                            die("Run: can't write to $reportFile\n");
-    open(my $reportFd2, ">", $reportHtml) ||
-                            die("Run: can't write to $reportHtml\n");
+    my $is_csv_header_written = 0;  # 如果写入 CSV，头部只需写入一次
+
+    # 打开日志文件
+    open(my $reportFd, ">", $reportFile) || die("Run: can't write to $reportFile\n");
+
+    # 打开 HTML 报告文件
+    open(my $reportFd2, ">", $reportHtml) || die("Run: can't write to $reportHtml\n");
+
+    # 如果设置了 CSV 输出，打开 CSV 报告文件
     my $reportFd_Csv;
     if ($isOutputFormatCsv) {
-        open($reportFd_Csv, ">", $reportCsv) ||
-                            die("Run: can't write to $reportCsv\n");
+        open($reportFd_Csv, ">", $reportCsv) || die("Run: can't write to $reportCsv\n");
     }
 
+    # 在 HTML 报告文件中输出 BYTE UNIX Benchmarks 版本信息
     printf $reportFd "   BYTE UNIX Benchmarks (Version %s)\n\n", $version;
+
+    # 运行 HTML 报告的头部
     runHeaderHtml($systemInfo, $reportFd2);
 
-    # Dump information about the system under test.
+    # 输出系统信息
     displaySystem($systemInfo, $reportFd);
     displaySystemHtml($systemInfo, $reportFd2);
 
-    # Run the tests!  Do a test run once for each desired number of copies;
-    # for example, on a 2-CPU system, we may do a single-processing run
-    # followed by a dual-processing run.
+    # 对于每个副本数，运行基准测试
     foreach my $c (@$copies) {
         if ($verbose > 1) {
             printf "Run with %s\n", number($c, "copy", "copies");
         }
+        
+        # 运行基准测试，并将结果输出到 HTML 和 CSV 文件中
         my $results = runTests($tests, $verbose, $logFile, $c);
 
+        # 输出基准测试运行的总结
         summarizeRun($systemInfo, $results, $verbose, $reportFd);
+
+        # 输出 HTML 报告的运行总结
         summarizeRunHtml($systemInfo, $results, $verbose, $reportFd2);
 
+        # 如果设置了 CSV 输出，输出 CSV 文件的头部并写入行数据
         if ($isOutputFormatCsv) {
             if ( $is_csv_header_written == 0 ) {
                 summarizeRunCsvHeader($results, $reportFd_Csv);
@@ -1977,25 +2058,27 @@ sub main {
         }
     }
 
+    # 运行 HTML 报告的尾部
     runFooterHtml($reportFd2);
 
-    # Finish the report.
+    # 关闭文件
     close($reportFd);
     close($reportFd2);
     if ($isOutputFormatCsv) {
         close($reportFd_Csv);
     }
 
-    # Display the report, if not in quiet mode.
+    # 如果不是静默模式，显示报告内容
     if ($verbose > 0) {
         printf "\n";
         printf  "========================================================================\n";
         system("cat \"$reportFile\"");
     }
 
-    0;
+    # 返回 0 表示程序成功运行结束
+    return 0;
 }
 
-
+# 执行主程序
 exit(main(@ARGV));
 
